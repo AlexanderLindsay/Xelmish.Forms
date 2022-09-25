@@ -53,6 +53,8 @@ let main _ =
         resolution = Windowed (1100, 600)
         assetsToLoad = [
             PipelineFont ("basic", "./content/basicFont")
+            PipelineTexture ("up-triangle", "./content/up_texture")
+            PipelineTexture ("down-triangle", "./content/down_texture")
         ]
         mouseVisible = true
     }

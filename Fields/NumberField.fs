@@ -106,7 +106,7 @@ let update model msg =
         | Valid i ->
             let n = i + 1.
             let r = sprintf "%.0f" n
-            { model with Value = Valid n; Raw = r; Cursor = setCursor r model.Cursor }, NoOutMessage
+            setValue model r model.Cursor
         | Invalid _ -> model, NoOutMessage
         | NoValue -> model, NoOutMessage
     | Decrement ->
@@ -114,7 +114,7 @@ let update model msg =
         | Valid i ->
             let n = i - 1.
             let r = sprintf "%.0f" n
-            { model with Value = Valid n; Raw = r; Cursor = setCursor r model.Cursor }, NoOutMessage
+            setValue model r model.Cursor
         | Invalid _ -> model, NoOutMessage
         | NoValue -> model, NoOutMessage
     | CursorLeft ->
@@ -173,17 +173,46 @@ let drawCursor (x,y) height font (fontSize: float) (text: string) cursor assets 
         spriteBatch.Draw(loadedAssets.whiteTexture, rect xPosition y 2 height, Color.Black)
     )
 
+let private isInside tx ty tw th x y = x >= tx && x <= tx + tw && y >= ty && y <= ty + th
+
+let drawButton texture (width, height) (x, y) =
+    OnDraw (fun loadedAssets inputs spriteBatch -> 
+        
+        let mouseOver = isInside x y width height inputs.mouseState.X inputs.mouseState.Y
+
+        let backgroundColour = 
+            match mouseOver with
+            | true -> Colour.Blue
+            | false -> Colour.LightGray
+
+        spriteBatch.Draw(loadedAssets.textures.[texture], rect x y width height, backgroundColour)
+    )
+
 let view (x,y) width fieldHeight isFocused model dispatch assets =
     let gap = 5
     let labelSize = getTextSize assets "basic" model.Label
     let fieldPosition = (x, y + int labelSize.Y + gap)
+
+    let arrowButtonWidth = 25
+    let upArrowPosition = (x + width - arrowButtonWidth, y + int labelSize.Y + gap)
+    let arrowButtonSize = (arrowButtonWidth, fieldHeight / 2)
+    let downArrowPosition = (x + width - arrowButtonWidth, y + int labelSize.Y + gap + fieldHeight / 2)
+
     [
         text "basic" 18. Colour.Black (0.,0.) model.Label (x,y)
-        colour Colour.BlanchedAlmond (width, fieldHeight) fieldPosition
+        colour Colour.BlanchedAlmond (width - arrowButtonWidth, fieldHeight) fieldPosition
         text "basic" 18. Colour.Black (0.,0.) model.Raw fieldPosition
         yield! (if isFocused then [drawCursor fieldPosition 16 "basic" 18. model.Raw model.Cursor assets] else [])
+        drawButton "up-triangle" arrowButtonSize upArrowPosition
+        drawButton "down-triangle" arrowButtonSize downArrowPosition
         onclick (fun () -> 
             dispatch (Focus)
         ) (width, int labelSize.Y + gap + fieldHeight) (x, y)
+        onclick (fun () -> 
+            dispatch (Increment)
+        ) arrowButtonSize upArrowPosition
+        onclick (fun () -> 
+            dispatch (Decrement)
+        ) arrowButtonSize downArrowPosition
         yield! buildEventHandlers isFocused dispatch
     ]

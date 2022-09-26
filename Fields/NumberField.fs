@@ -50,24 +50,6 @@ let update model msg =
 
 let private isdigit = Regex("[\d\.-]+")
 
-let buildEventHandlers isFocused dispatch =
-    match isFocused with
-    | true ->
-        [
-            onupdate (fun inputs ->
-                match inputs.typedValues with
-                | v when isdigit.IsMatch v -> dispatch (AddValue v)
-                | _ -> ()
-            )
-            onkeydown Keys.Right (fun _ -> dispatch (CursorRight))
-            onkeydown Keys.Left (fun _ -> dispatch (CursorLeft))
-            onkeydown Keys.Back (fun _ -> dispatch (Backspace))
-            onkeydown Keys.Delete (fun _ -> dispatch (Delete))
-            onkeydown Keys.Home (fun _ -> dispatch (CursorStart))
-            onkeydown Keys.End (fun _ -> dispatch (CursorEnd))
-        ]
-    | false -> []
-
 let private isInside tx ty tw th x y = x >= tx && x <= tx + tw && y >= ty && y <= ty + th
 
 let drawButton texture (width, height) (x, y) =
@@ -102,5 +84,5 @@ let view (x,y) width fieldHeight isFocused model dispatch assets =
         onclick (fun () -> 
             dispatch (Decrement)
         ) arrowButtonSize downArrowPosition
-        yield! buildEventHandlers isFocused (FieldMsg >> dispatch)
+        yield! buildEventHandlers isdigit isFocused (FieldMsg >> dispatch)
     ]

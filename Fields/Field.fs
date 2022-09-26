@@ -4,17 +4,25 @@ open System
 open Microsoft.Xna.Framework
 open Xelmish.Model
 open Xelmish.Viewables
+open System.Text.RegularExpressions
 
 type FieldValueState<'T>
     = Valid of 'T
     | Invalid of string*string
     | NoValue
 
+type CusorState
+    = Visible of TimeSpan
+    | Hidden of TimeSpan
+
 type Model<'T> = {
     Id: string
     Label: string
     Value: FieldValueState<'T>
     Cursor: int
+    CusorVisibleFor: TimeSpan
+    CusorHiddenFor: TimeSpan
+    CusorState: CusorState
     Raw: string
     Parse: string -> FieldValueState<'T>
     ValueToString: 'T -> string
@@ -34,9 +42,12 @@ type Message
     | CursorRight
     | CursorStart
     | CursorEnd
+    | UpdateCursorTime of TimeSpan
     | Focus
 
 let initField parse toString id label value =
+    let visibleSpan = TimeSpan(0,0,0,0,500)
+    let hiddenSpan = TimeSpan(0,0,0,0,500)
     {
         Id = id;
         Value = 
@@ -48,6 +59,9 @@ let initField parse toString id label value =
             |> Option.map (fun v -> toString v)
             |> Option.defaultValue "";
         Cursor = 0;
+        CusorVisibleFor = visibleSpan;
+        CusorHiddenFor = hiddenSpan;
+        CusorState = Visible visibleSpan;
         Label = label;
         Parse = parse;
         ValueToString = toString;
@@ -91,6 +105,19 @@ let deleteValue model =
         let raw' = model.Raw.Remove(model.Cursor, 1)
         setValue model raw' model.Cursor
 
+let updateCusorState visibleFor hiddenFor state elapsed =
+    match state with
+    | Visible remaining ->
+        let remaining' = remaining - elapsed
+        match remaining.TotalMilliseconds > 0 with
+        | true -> Visible remaining'
+        | false -> Hidden hiddenFor
+    | Hidden remaining ->
+        let remaining' = remaining - elapsed
+        match remaining.TotalMilliseconds > 0 with
+        | true -> Hidden remaining'
+        | false -> Visible visibleFor
+
 let update model msg =
     match msg with
     | AddValue str ->
@@ -109,6 +136,8 @@ let update model msg =
         { model with Cursor = setCursor model.Raw 0 }, NoOutMessage
     | CursorEnd ->
         { model with Cursor = setCursor model.Raw model.Raw.Length }, NoOutMessage
+    | UpdateCursorTime elapsed ->
+        { model with CusorState = updateCusorState model.CusorVisibleFor model.CusorHiddenFor model.CusorState elapsed}, NoOutMessage
     | Focus ->
         model, OutMessage.Focus model.Id
 
@@ -120,13 +149,16 @@ let getTextSize (assets: LoadedAssets) fontName (text: string) =
     )
     |> Option.defaultValue (Vector2 (0f, 0f))
 
-let drawCursor (x,y) height font (fontSize: float) (text: string) cursor assets =
-    let measured = getTextSize assets font (text.Substring (0, cursor))
-    let xPosition = x + int measured.X
+let drawCursor (x,y) height font (fontSize: float) (text: string) cursor cursorState assets =
+    match cursorState with
+    | Visible _ ->
+        let measured = getTextSize assets font (text.Substring (0, cursor))
+        let xPosition = x + int measured.X
 
-    OnDraw (fun loadedAssets _ spriteBatch -> 
-        spriteBatch.Draw(loadedAssets.whiteTexture, rect xPosition y 2 height, Color.Black)
-    )
+        [OnDraw (fun loadedAssets _ spriteBatch -> 
+            spriteBatch.Draw(loadedAssets.whiteTexture, rect xPosition y 2 height, Color.Black)
+        )]
+    | Hidden _ -> []
 
 let buildFieldView (x,y) width fieldHeight isFocused model dispatch assets =
     let gap = 5
@@ -137,8 +169,29 @@ let buildFieldView (x,y) width fieldHeight isFocused model dispatch assets =
         text "basic" 18. Colour.Black (0.,0.) model.Label (x,y)
         colour Colour.BlanchedAlmond (width, fieldHeight) fieldPosition
         text "basic" 18. Colour.Black (0.,0.) model.Raw fieldPosition
-        yield! (if isFocused then [drawCursor fieldPosition 16 "basic" 18. model.Raw model.Cursor assets] else [])
+        yield! (if isFocused then drawCursor fieldPosition 16 "basic" 18. model.Raw model.Cursor model.CusorState assets else [])
         onclick (fun () -> 
             dispatch (Focus)
         ) (width, int labelSize.Y + gap + fieldHeight) (x, y)
     ])
+
+let buildEventHandlers (validKeyRegex: Regex) isFocused dispatch =
+    match isFocused with
+    | true ->
+        [
+            onupdate (fun inputs ->
+                match inputs.typedValues with
+                | v when validKeyRegex.IsMatch v -> dispatch (AddValue v)
+                | _ -> ()
+            )
+            onupdate (fun inputs ->
+                dispatch (UpdateCursorTime inputs.gameTime.ElapsedGameTime)
+            )
+            onkeydown Keys.Right (fun _ -> dispatch (CursorRight))
+            onkeydown Keys.Left (fun _ -> dispatch (CursorLeft))
+            onkeydown Keys.Back (fun _ -> dispatch (Backspace))
+            onkeydown Keys.Delete (fun _ -> dispatch (Delete))
+            onkeydown Keys.Home (fun _ -> dispatch (CursorStart))
+            onkeydown Keys.End (fun _ -> dispatch (CursorEnd))
+        ]
+    | false -> []

@@ -65,6 +65,7 @@ type Inputs = {
     mouseState: MouseState
     lastMouseState: MouseState
     gameTime: GameTime
+    typedValues: string
 }
 with member __.totalGameTime with get() = int64 __.gameTime.TotalGameTime.TotalMilliseconds
 

@@ -1,12 +1,14 @@
 module internal Xelmish.GameLoop
 
 open System.IO
+open System.Text
 open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Graphics
 open Microsoft.Xna.Framework.Input
 open Microsoft.Xna.Framework.Audio
 open Microsoft.Xna.Framework.Media
 open Model
+open Xelmish
 
 /// GameLoop is an inherited implementation of XNA's Game class
 type GameLoop (config: GameConfig) as this = 
@@ -18,7 +20,7 @@ type GameLoop (config: GameConfig) as this =
     let mutable spriteBatch = Unchecked.defaultof<_>
     let mutable assets = Unchecked.defaultof<_>
     let mutable isLoaded = false
-    
+
     // this is set and updated every Update (60 times a second)
     let mutable inputs = {
         keyboardState = Unchecked.defaultof<_>
@@ -26,7 +28,10 @@ type GameLoop (config: GameConfig) as this =
         mouseState = Unchecked.defaultof<_>
         lastMouseState = Unchecked.defaultof<_>
         gameTime = Unchecked.defaultof<_>
+        typedValues = ""
     }
+
+    let characterQueue = Queue.queue()
 
     // these two collections are set by the Elmish setState call
     let mutable updatable: (Inputs -> Unit) list = []
@@ -76,6 +81,9 @@ type GameLoop (config: GameConfig) as this =
             setRes w h
 
         this.IsMouseVisible <- config.mouseVisible
+        this.Window.TextInput.AddHandler (fun _sender event -> 
+            characterQueue.Enqueue (event.Character)
+        )
         
         // This makes draw run at monitor fps, rather than 60fps
         graphics.SynchronizeWithVerticalRetrace <- true 
@@ -129,13 +137,19 @@ type GameLoop (config: GameConfig) as this =
         runView()
 
     override __.Update gameTime =
+        let strBuilder = StringBuilder()
+        while characterQueue.HasValues() do
+            let char = characterQueue.Dequeue()
+            strBuilder.Append(char) |> ignore
+
         // update inputs. last keyboard and mouse state are preserved so changes can be detected
         inputs <- 
             {   lastKeyboardState = inputs.keyboardState
                 keyboardState = Keyboard.GetState ()
                 lastMouseState = inputs.mouseState
                 mouseState = Mouse.GetState ()
-                gameTime = gameTime }
+                gameTime = gameTime
+                typedValues = strBuilder.ToString() }
 
         try
             for updateFunc in updatable do updateFunc inputs

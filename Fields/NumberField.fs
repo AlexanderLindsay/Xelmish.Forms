@@ -6,6 +6,7 @@ open Microsoft.Xna.Framework
 
 open FieldValueState
 open System
+open System.Text.RegularExpressions
 
 type Model = {
     Id: string
@@ -29,6 +30,8 @@ type Message
     | Decrement
     | CursorLeft
     | CursorRight
+    | CursorStart
+    | CursorEnd
     | Focus
 
 let init id label value =
@@ -105,7 +108,7 @@ let update model msg =
         match model.Value with
         | Valid i ->
             let n = i + 1.
-            let r = sprintf "%.0f" n
+            let r = sprintf "%g" n
             setValue model r model.Cursor
         | Invalid _ -> model, NoOutMessage
         | NoValue -> model, NoOutMessage
@@ -113,7 +116,7 @@ let update model msg =
         match model.Value with
         | Valid i ->
             let n = i - 1.
-            let r = sprintf "%.0f" n
+            let r = sprintf "%g" n
             setValue model r model.Cursor
         | Invalid _ -> model, NoOutMessage
         | NoValue -> model, NoOutMessage
@@ -121,39 +124,30 @@ let update model msg =
         { model with Cursor = setCursor model.Raw (model.Cursor - 1) }, NoOutMessage
     | CursorRight ->
         { model with Cursor = setCursor model.Raw (model.Cursor + 1) }, NoOutMessage
+    | CursorStart ->
+        { model with Cursor = setCursor model.Raw 0 }, NoOutMessage
+    | CursorEnd ->
+        { model with Cursor = setCursor model.Raw model.Raw.Length }, NoOutMessage
     | Focus ->
         model, OutMessage.Focus model.Id
+
+let private isdigit = Regex("[\d\.-]+")
 
 let buildEventHandlers isFocused dispatch =
     match isFocused with
     | true ->
         [
+            onupdate (fun inputs ->
+                match inputs.typedValues with
+                | v when isdigit.IsMatch v -> dispatch (AddValue v)
+                | _ -> ()
+            )
             onkeydown Keys.Right (fun _ -> dispatch (CursorRight))
             onkeydown Keys.Left (fun _ -> dispatch (CursorLeft))
-            onkeydown Keys.NumPad0 (fun _ -> dispatch (AddValue "0"))
-            onkeydown Keys.D0 (fun _ -> dispatch (AddValue "0"))
-            onkeydown Keys.NumPad1 (fun _ -> dispatch (AddValue "1"))
-            onkeydown Keys.D1 (fun _ -> dispatch (AddValue "1"))
-            onkeydown Keys.NumPad2 (fun _ -> dispatch (AddValue "2"))
-            onkeydown Keys.D2 (fun _ -> dispatch (AddValue "2"))
-            onkeydown Keys.NumPad3 (fun _ -> dispatch (AddValue "3"))
-            onkeydown Keys.D3 (fun _ -> dispatch (AddValue "3"))
-            onkeydown Keys.NumPad4 (fun _ -> dispatch (AddValue "4"))
-            onkeydown Keys.D4 (fun _ -> dispatch (AddValue "4"))
-            onkeydown Keys.NumPad5 (fun _ -> dispatch (AddValue "5"))
-            onkeydown Keys.D5 (fun _ -> dispatch (AddValue "5"))
-            onkeydown Keys.NumPad6 (fun _ -> dispatch (AddValue "6"))
-            onkeydown Keys.D6 (fun _ -> dispatch (AddValue "6"))
-            onkeydown Keys.NumPad7 (fun _ -> dispatch (AddValue "7"))
-            onkeydown Keys.D7 (fun _ -> dispatch (AddValue "7"))
-            onkeydown Keys.NumPad8 (fun _ -> dispatch (AddValue "8"))
-            onkeydown Keys.D8 (fun _ -> dispatch (AddValue "8"))
-            onkeydown Keys.NumPad9 (fun _ -> dispatch (AddValue "9"))
-            onkeydown Keys.D9 (fun _ -> dispatch (AddValue "9"))
-            onkeydown Keys.OemPeriod (fun _ -> dispatch (AddValue "."))
-            onkeydown Keys.Decimal (fun _ -> dispatch (AddValue "."))
             onkeydown Keys.Back (fun _ -> dispatch (Backspace))
             onkeydown Keys.Delete (fun _ -> dispatch (Delete))
+            onkeydown Keys.Home (fun _ -> dispatch (CursorStart))
+            onkeydown Keys.End (fun _ -> dispatch (CursorEnd))
         ]
     | false -> []
 

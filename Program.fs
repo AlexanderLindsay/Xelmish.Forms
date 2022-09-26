@@ -6,20 +6,25 @@ open Xelmish.Form.Fields
 
 type Model = {
     Num: float;
+    Str: string;
     Focus: FocusTracker.Model<string>
     NumField: NumberField.Model
+    StrField: StringField.Model
 }
 
 let init () =
     {
         Num = 0.
+        Str = ""
         Focus = FocusTracker.init ()
         NumField = NumberField.init "test-number-field" "Number" <| Some 0.
+        StrField = StringField.init "test-string-field" "String" <| Some ""
     }, Cmd.none
 
 type Message 
     = FocusMessage of FocusTracker.Message<string>
     | NumField of NumberField.Message
+    | StrField of StringField.Message
 
 let update message model =
     match message with
@@ -38,12 +43,28 @@ let update message model =
                     |> Option.defaultValue model.Num
                 { model with Num = n' }
         { model' with NumField = fieldModel }, Cmd.none
+    | StrField smsg ->
+        let (fieldModel, fieldCmd) = StringField.update model.StrField smsg
+        let model' =
+            match fieldCmd with
+            | StringField.OutMessage.NoOutMessage -> model
+            | StringField.OutMessage.Focus id ->
+                { model with Focus = FocusTracker.changeFocus model.Focus <| Some id }
+            | StringField.OutMessage.ChangeValue fo ->
+                let s' =
+                    fo
+                    |> Option.defaultValue model.Str
+                { model with Str = s' }
+        { model' with StrField = fieldModel }, Cmd.none
 
 let view model dispatch assets =
     [
         colour Colour.White (200, 500) (25, 25)
-        text "basic" 18. Colour.Black (0., 0.) (sprintf "Value: %.2f" model.Num) (50, 50)
-        yield! NumberField.view (50, 100) 100 20 (FocusTracker.isFocused model.Focus model.NumField.Id) model.NumField (NumField >> dispatch) assets
+        colour Colour.White (200, 500) (250, 25)
+        text "basic" 18. Colour.Black (0., 0.) (sprintf "Number Value: %.2f" model.Num) (250, 25)
+        text "basic" 18. Colour.Black (0., 0.) (sprintf "String Value: %s" model.Str) (250, 100)
+        yield! NumberField.view (50, 25) 100 20 (FocusTracker.isFocused model.Focus model.NumField.Id) model.NumField (NumField >> dispatch) assets
+        yield! StringField.view (50, 100) 100 20 (FocusTracker.isFocused model.Focus model.StrField.Id) model.StrField (StrField >> dispatch) assets
     ]
 
 [<EntryPoint>]

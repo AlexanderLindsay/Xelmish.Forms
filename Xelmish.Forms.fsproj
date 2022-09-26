@@ -26,7 +26,7 @@
     <Compile Include="Xelmish\GameLoop.fs" />
     <Compile Include="Xelmish\Program.fs" />
     <Compile Include="FocusTracker.fs" />
-    <Compile Include="Fields\FieldValueState.fs" />
+    <Compile Include="Fields\Field.fs" />
     <Compile Include="Fields\NumberField.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

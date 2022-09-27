@@ -13,7 +13,7 @@ type FieldValueState<'T>
     | Invalid of string*string
     | NoValue
 
-type CusorState
+type CursorState
     = Visible of TimeSpan
     | Hidden of TimeSpan
 
@@ -22,9 +22,9 @@ type Model<'T> = {
     Label: string
     Value: FieldValueState<'T>
     Cursor: int
-    CusorVisibleFor: TimeSpan
-    CusorHiddenFor: TimeSpan
-    CusorState: CusorState
+    CursorVisibleFor: TimeSpan
+    CursorHiddenFor: TimeSpan
+    CursorState: CursorState
     Raw: string
     Parse: string -> FieldValueState<'T>
     ValueToString: 'T -> string
@@ -61,9 +61,9 @@ let initField parse toString id label value =
             |> Option.map (fun v -> toString v)
             |> Option.defaultValue "";
         Cursor = 0;
-        CusorVisibleFor = visibleSpan;
-        CusorHiddenFor = hiddenSpan;
-        CusorState = Visible visibleSpan;
+        CursorVisibleFor = visibleSpan;
+        CursorHiddenFor = hiddenSpan;
+        CursorState = Visible visibleSpan;
         Label = label;
         Parse = parse;
         ValueToString = toString;
@@ -86,6 +86,7 @@ let setValue model str cursor =
         Raw = str; 
         Value = value';
         Cursor = setCursor str cursor;
+        CursorState = Visible model.CursorVisibleFor;
     }, cmd
 
 let addTo model str =
@@ -107,7 +108,7 @@ let deleteValue model =
         let raw' = model.Raw.Remove(model.Cursor, 1)
         setValue model raw' model.Cursor
 
-let updateCusorState visibleFor hiddenFor state elapsed =
+let updateCursorState visibleFor hiddenFor state elapsed =
     match state with
     | Visible remaining ->
         let remaining' = remaining - elapsed
@@ -139,27 +140,26 @@ let update model msg =
     | CursorEnd ->
         { model with Cursor = setCursor model.Raw model.Raw.Length }, NoOutMessage
     | UpdateCursorTime elapsed ->
-        { model with CusorState = updateCusorState model.CusorVisibleFor model.CusorHiddenFor model.CusorState elapsed}, NoOutMessage
+        { model with CursorState = updateCursorState model.CursorVisibleFor model.CursorHiddenFor model.CursorState elapsed}, NoOutMessage
     | Focus ->
         model, OutMessage.Focus model.Id
 
-let getTextSize (assets: LoadedAssets) fontName (text: string) =
-    assets.fonts
-    |> Map.tryFind fontName
-    |> Option.map (FontUtilities.measureString text)
-    |> Option.defaultValue (Vector2 (0f, 0f))
+let getFont (assets: LoadedAssets) fontName =
+    let font = 
+        assets.fonts
+        |> Map.tryFind fontName
+    match font with
+    | Some f -> f
+    | None -> raise (ArgumentException(sprintf "No font \"%s\" could be found" fontName))
 
-let getStringCutoff assets fontName text boundary =
-    assets.fonts
-    |> Map.tryFind fontName
-    |> Option.map (FontUtilities.getStringCutoff text (1f,1f) boundary)
-    |> Option.defaultValue 0
+let getStringCutoff font text boundary =
+    FontUtilities.getStringCutoff text (1f,1f) boundary font
 
-let drawCursor (x,y) height font (fontSize: float) (text: string) cursor cursorState assets =
+let drawCursor (x,y) height font (fontSize: float) (text: string) cursor cursorState =
     match cursorState with
     | Visible _ ->
         let index = Math.Min(cursor, text.Length)
-        let measured = getTextSize assets font (text.Substring (0, index))
+        let measured = FontUtilities.measureString (text.Substring (0, index)) font
         let xPosition = x + int measured.X
 
         [OnDraw (fun loadedAssets _ spriteBatch -> 
@@ -167,19 +167,32 @@ let drawCursor (x,y) height font (fontSize: float) (text: string) cursor cursorS
         )]
     | Hidden _ -> []
 
+let rec createWindowedString font text width cursor_index =
+    let cutoffLength = getStringCutoff font text width
+    match cutoffLength with
+    | 0 -> text
+    | cl when text.Length - 1 = cl -> text
+    | cl when cursor_index > cl ->
+        let startIndex = cursor_index - cutoffLength
+        let text' = text.Substring(startIndex)
+        let cursor_index' = cursor_index - startIndex
+        createWindowedString font text' width cursor_index'
+    | _ ->
+        text.Substring(0,cutoffLength)
+
 let buildFieldView (x,y) width fieldHeight isFocused model dispatch assets =
+    let basicFont = getFont assets "basic"
     let gap = 5
-    let labelSize = getTextSize assets "basic" model.Label
+    let labelSize = FontUtilities.measureString model.Label basicFont
     let fieldPosition = (x, y + int labelSize.Y + gap)
 
-    let endIndex = getStringCutoff assets "basic" model.Raw width
-    let str = model.Raw.Substring(0, endIndex)
+    let str = createWindowedString basicFont model.Raw width model.Cursor
 
     (fieldPosition, [
         text "basic" 18. Colour.Black (0.,0.) model.Label (x,y)
-        colour Colour.BlanchedAlmond (width, fieldHeight) fieldPosition
+        colour Colour.BlanchedAlmond (width + 3, fieldHeight + 1) (fst fieldPosition - 3, snd fieldPosition - 1)
         text "basic" 18. Colour.Black (0.,0.) str fieldPosition
-        yield! (if isFocused then drawCursor fieldPosition 16 "basic" 18. str model.Cursor model.CusorState assets else [])
+        yield! (if isFocused then drawCursor fieldPosition 16 basicFont 18. str model.Cursor model.CursorState else [])
         onclick (fun () -> 
             dispatch (Focus)
         ) (width, int labelSize.Y + gap + fieldHeight) (x, y)

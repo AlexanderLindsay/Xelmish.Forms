@@ -1,7 +1,4 @@
-module Xelmish.Form.Fields.StringField
-
-open Xelmish.Model
-open Xelmish.Viewables
+module Xelmish.Forms.Fields.StringField
 
 open System.Text.RegularExpressions
 
@@ -18,7 +15,7 @@ let init id label value =
 
 let update = Field.update
 
-let private ischar = Regex(".+")
+let private ischar = Regex("[\w@./#&+-]+")
 
 let view (x,y) width fieldHeight isFocused model dispatch assets =
 

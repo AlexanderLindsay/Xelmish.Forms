@@ -1,4 +1,4 @@
-module Xelmish.Form.Fields.NumberField
+module Xelmish.Forms.Fields.NumberField
 
 open Xelmish.Model
 open Xelmish.Viewables

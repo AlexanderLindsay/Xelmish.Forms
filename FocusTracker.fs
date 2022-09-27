@@ -1,4 +1,4 @@
-module Xelmish.Form.FocusTracker
+module Xelmish.Forms.FocusTracker
 
 type Model<'T when 'T: equality> = {
     Focused: 'T option

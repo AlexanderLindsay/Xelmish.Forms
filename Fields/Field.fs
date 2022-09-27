@@ -1,10 +1,12 @@
-module Xelmish.Form.Fields.Field
+module Xelmish.Forms.Fields.Field
 
 open System
 open Microsoft.Xna.Framework
+open System.Text.RegularExpressions
+
 open Xelmish.Model
 open Xelmish.Viewables
-open System.Text.RegularExpressions
+open Xelmish.Forms
 
 type FieldValueState<'T>
     = Valid of 'T
@@ -144,15 +146,20 @@ let update model msg =
 let getTextSize (assets: LoadedAssets) fontName (text: string) =
     assets.fonts
     |> Map.tryFind fontName
-    |> Option.map (fun font ->
-        font.MeasureString (text)
-    )
+    |> Option.map (FontUtilities.measureString text)
     |> Option.defaultValue (Vector2 (0f, 0f))
+
+let getStringCutoff assets fontName text boundary =
+    assets.fonts
+    |> Map.tryFind fontName
+    |> Option.map (FontUtilities.getStringCutoff text (1f,1f) boundary)
+    |> Option.defaultValue 0
 
 let drawCursor (x,y) height font (fontSize: float) (text: string) cursor cursorState assets =
     match cursorState with
     | Visible _ ->
-        let measured = getTextSize assets font (text.Substring (0, cursor))
+        let index = Math.Min(cursor, text.Length)
+        let measured = getTextSize assets font (text.Substring (0, index))
         let xPosition = x + int measured.X
 
         [OnDraw (fun loadedAssets _ spriteBatch -> 
@@ -165,11 +172,14 @@ let buildFieldView (x,y) width fieldHeight isFocused model dispatch assets =
     let labelSize = getTextSize assets "basic" model.Label
     let fieldPosition = (x, y + int labelSize.Y + gap)
 
+    let endIndex = getStringCutoff assets "basic" model.Raw width
+    let str = model.Raw.Substring(0, endIndex)
+
     (fieldPosition, [
         text "basic" 18. Colour.Black (0.,0.) model.Label (x,y)
         colour Colour.BlanchedAlmond (width, fieldHeight) fieldPosition
-        text "basic" 18. Colour.Black (0.,0.) model.Raw fieldPosition
-        yield! (if isFocused then drawCursor fieldPosition 16 "basic" 18. model.Raw model.Cursor model.CusorState assets else [])
+        text "basic" 18. Colour.Black (0.,0.) str fieldPosition
+        yield! (if isFocused then drawCursor fieldPosition 16 "basic" 18. str model.Cursor model.CusorState assets else [])
         onclick (fun () -> 
             dispatch (Focus)
         ) (width, int labelSize.Y + gap + fieldHeight) (x, y)

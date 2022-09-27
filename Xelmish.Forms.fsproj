@@ -19,6 +19,7 @@
     <EmbeddedResource Include="Icon.bmp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FontUtilities.fs" />
     <Compile Include="Xelmish\Queue.fs" />
     <Compile Include="Xelmish\Model.fs" />
     <Compile Include="Xelmish\Viewables.fs" />

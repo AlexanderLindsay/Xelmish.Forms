@@ -1,8 +1,8 @@
 open Elmish
 open Xelmish.Model
 open Xelmish.Viewables
-open Xelmish.Form
-open Xelmish.Form.Fields
+open Xelmish.Forms
+open Xelmish.Forms.Fields
 
 type Model = {
     Num: float;

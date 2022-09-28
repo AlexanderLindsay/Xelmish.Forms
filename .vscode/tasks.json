@@ -7,7 +7,7 @@
 			"type": "process",
 			"args": [
 				"build",
-				"${workspaceFolder}/Xelmish.Forms.fsproj",
+				"${workspaceFolder}/src/Xelmish.Forms.fsproj",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
@@ -19,7 +19,7 @@
 			"type": "process",
 			"args": [
 				"publish",
-				"${workspaceFolder}/Xelmish.Forms.fsproj",
+				"${workspaceFolder}/src/Xelmish.Forms.fsproj",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
@@ -33,7 +33,7 @@
 				"watch",
 				"run",
 				"--project",
-				"${workspaceFolder}/Xelmish.Forms.fsproj"
+				"${workspaceFolder}/src/Xelmish.Forms.fsproj"
 			],
 			"problemMatcher": "$msCompile"
 		}

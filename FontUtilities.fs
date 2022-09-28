@@ -64,12 +64,12 @@ let getStringCutoff (text: string) (scaleX, scaleY) boundary (font: SpriteFont) 
                     | true ->
                         (Math.Max(currentGlyph.LeftSideBearing, 0f), false)
                     | false ->
-                        (ox + spacing + currentGlyph.LeftSideBearing, false)
-                let rightMost = ((x + float32 currentGlyph.Cropping.X) * scaleX) + (float32 currentGlyph.BoundsInTexture.Width * scaleX)
+                        (ox + spacing, false)
+                let rightMost = ((x + float32 currentGlyph.Cropping.X + currentGlyph.WidthIncludingBearings) * scaleX)
                 match rightMost with
                 | rm when rm < float32 boundary ->
                     { cs with 
-                        Offset = (rm + currentGlyph.RightSideBearing, oy);
+                        Offset = (rm, oy);
                         IsFirst = first';
                     }
                 | _ ->

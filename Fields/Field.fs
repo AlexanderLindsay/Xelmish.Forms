@@ -167,18 +167,17 @@ let drawCursor (x,y) height font (fontSize: float) (text: string) cursor cursorS
         )]
     | Hidden _ -> []
 
-let rec createWindowedString font text width cursor_index =
-    let cutoffLength = getStringCutoff font text width
+let rec createWindowedString font (text: string) width cursor_index startIndex =
+    let cutoffText = text.Substring(startIndex)
+    let cutoffLength = getStringCutoff font cutoffText width
     match cutoffLength with
-    | 0 -> text
-    | cl when text.Length - 1 = cl -> text
-    | cl when cursor_index > cl ->
-        let startIndex = cursor_index - cutoffLength
-        let text' = text.Substring(startIndex)
-        let cursor_index' = cursor_index - startIndex
-        createWindowedString font text' width cursor_index'
+    | 0 -> cutoffText
+    | cl when cutoffText.Length - 1 = cl -> cutoffText
+    | cl when cursor_index > (startIndex + cl) ->
+        let startIndex' = startIndex + 1
+        createWindowedString font text width cursor_index startIndex'
     | _ ->
-        text.Substring(0,cutoffLength)
+        text.Substring(startIndex, cutoffLength)
 
 let buildFieldView (x,y) width fieldHeight isFocused model dispatch assets =
     let basicFont = getFont assets "basic"
@@ -186,7 +185,7 @@ let buildFieldView (x,y) width fieldHeight isFocused model dispatch assets =
     let labelSize = FontUtilities.measureString model.Label basicFont
     let fieldPosition = (x, y + int labelSize.Y + gap)
 
-    let str = createWindowedString basicFont model.Raw width model.Cursor
+    let str = createWindowedString basicFont model.Raw width model.Cursor 0
 
     (fieldPosition, [
         text "basic" 18. Colour.Black (0.,0.) model.Label (x,y)

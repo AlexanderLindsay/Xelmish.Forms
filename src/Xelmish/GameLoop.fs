@@ -60,6 +60,9 @@ type GameLoop (config: GameConfig) as this =
     member __.SetView viewFunc =
         view <- viewFunc
         runView()
+    
+    member __.GetLoadedAssets =
+        if isLoaded then Some assets else None
 
     override __.Initialize () = 
         // Set up overall run settings here, like resolution, screen type and fps

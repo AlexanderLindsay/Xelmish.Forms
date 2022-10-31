@@ -10,16 +10,16 @@ type OutMessage = Field.OutMessage<string>
 
 type Message = Field.Message
 
-let init id label value =
-    initField (fun s -> Valid s) (fun s -> s) id label value
+let init gameInfo width font  id label value =
+    initField gameInfo (fun s -> Valid s) (fun s -> s) id width font label value
 
 let update = Field.update
 
 let private ischar = Regex("[\w@./#&+-]+")
 
-let view (x,y) width fieldHeight isFocused model dispatch assets =
+let view (x,y) fieldHeight isFocused model dispatch assets =
 
-    let (_, fieldViewables) = buildFieldView (x,y) width fieldHeight isFocused model (dispatch) assets
+    let (_, fieldViewables) = buildFieldView (x,y) fieldHeight isFocused model (dispatch) assets
 
     [
         yield! fieldViewables

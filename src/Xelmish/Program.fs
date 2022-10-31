@@ -5,13 +5,24 @@ open Elmish
 open GameLoop
 open Model
 
+type GameInfo = {
+    Exit: unit -> unit
+    GetAssets: unit -> LoadedAssets option
+}
+
 /// Entry point to run an Elmish application using Xelmish.
 /// Expects a GameConfig variable with basic game loop setup config (e.g. resolution, assets)
 let runGameLoop config (program: Program<_, _, _, LoadedAssets -> Viewable list>) =
     use loop = new GameLoop (config)
+    let gameInfo = {
+        Exit = fun () -> loop.Exit();
+        GetAssets = fun () -> loop.GetLoadedAssets;
+    }
     let setState model dispatch =
         loop.SetView <| (Program.view program) model dispatch
-    program |> Program.withSetState setState |> Program.run
+    program
+    |> Program.withSetState setState 
+    |> Program.runWith gameInfo
     loop.Run ()
 
 /// Alternative entry point to Xelmish from Elmish.

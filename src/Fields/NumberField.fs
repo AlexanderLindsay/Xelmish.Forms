@@ -24,17 +24,17 @@ let tryParseFloat str =
     with
         | :? FormatException as fe -> Invalid (str, fe.Message)
 
-let init id label value =
-    initField tryParseFloat (fun v -> sprintf "%.0f" v) id label value
+let init gameInfo width font id label value =
+    initField gameInfo tryParseFloat (fun v -> sprintf "%.0f" v) id width font label value
 
-let update model msg =
+let update gameInfo model msg =
     match msg with
     | Increment ->
         match model.Value with
         | Valid i ->
             let n = i + 1.
             let r = sprintf "%g" n
-            setValue model r model.Cursor
+            setValue gameInfo model r model.Cursor
         | Invalid _ -> model, NoOutMessage
         | NoValue -> model, NoOutMessage
     | Decrement ->
@@ -42,11 +42,11 @@ let update model msg =
         | Valid i ->
             let n = i - 1.
             let r = sprintf "%g" n
-            setValue model r model.Cursor
+            setValue gameInfo model r model.Cursor
         | Invalid _ -> model, NoOutMessage
         | NoValue -> model, NoOutMessage
     | FieldMsg fmsg ->
-        Field.update model fmsg
+        Field.update gameInfo model fmsg
 
 let private isdigit = Regex("[\d\.-]+")
 
@@ -65,14 +65,14 @@ let drawButton texture (width, height) (x, y) =
         spriteBatch.Draw(loadedAssets.textures.[texture], rect x y width height, backgroundColour)
     )
 
-let view (x,y) width fieldHeight isFocused model dispatch assets =
+let view (x,y) fieldHeight isFocused model dispatch assets =
 
     let arrowButtonWidth = 25
     let arrowButtonSize = (arrowButtonWidth, fieldHeight / 2)
 
-    let ((fpx, fpy), fieldViewables) = buildFieldView (x,y) (width - arrowButtonWidth) fieldHeight isFocused model (FieldMsg >> dispatch) assets
-    let upArrowPosition = (fpx + width - arrowButtonWidth, fpy)
-    let downArrowPosition = (fpx + width - arrowButtonWidth, fpy + fieldHeight / 2)
+    let ((fpx, fpy), fieldViewables) = buildFieldView (x,y) fieldHeight isFocused model (FieldMsg >> dispatch) assets
+    let upArrowPosition = (fpx + model.Window.Width - arrowButtonWidth, fpy)
+    let downArrowPosition = (fpx + model.Window.Width - arrowButtonWidth, fpy + fieldHeight / 2)
 
     [
         yield! fieldViewables

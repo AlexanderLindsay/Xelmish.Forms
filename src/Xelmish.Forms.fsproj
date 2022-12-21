@@ -30,6 +30,7 @@
     <Compile Include="Fields\Field.fs" />
     <Compile Include="Fields\NumberField.fs" />
     <Compile Include="Fields\StringField.fs" />
+    <Compile Include="Form.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

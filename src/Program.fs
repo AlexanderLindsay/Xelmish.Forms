@@ -5,68 +5,59 @@ open Xelmish.Forms
 open Xelmish.Forms.Fields
 
 type Model = {
-    Game: Xelmish.Program.GameInfo;
-    Num: float;
-    Str: string;
-    Focus: FocusTracker.Model<string>
-    NumField: NumberField.Model
-    StrField: StringField.Model
+    Form: Form.Model;
 }
 
 let init gameInfo =
     {
-        Game = gameInfo
-        Num = 0.
-        Str = ""
-        Focus = FocusTracker.init ()
-        NumField = NumberField.init gameInfo 100 "basic" "test-number-field" "Number" <| Some 0.
-        StrField = StringField.init gameInfo 100 "basic" "test-string-field" "String" <| Some ""
+        Form = Form.init gameInfo [
+            Form.NumField (0.,NumberField.init gameInfo 100 "basic" "test-number-field" "Number" <| Some 0.)
+            Form.StrField ("",StringField.init gameInfo 100 "basic" "test-string-field" "String" <| Some "")
+        ]
     }, Cmd.none
 
 type Message 
-    = FocusMessage of FocusTracker.Message<string>
-    | NumField of NumberField.Message
-    | StrField of StringField.Message
+    = FormMessage of Form.Message
 
 let update message model =
     match message with
-    | FocusMessage fmsg ->
-        { model with Focus = FocusTracker.update model.Focus fmsg }, Cmd.none
-    | NumField nmsg ->
-        let (fieldModel, fieldCmd) = NumberField.update model.Game model.NumField nmsg
-        let model' =
-            match fieldCmd with
-            | NumberField.OutMessage.NoOutMessage -> model
-            | NumberField.OutMessage.Focus id ->
-                { model with Focus = FocusTracker.changeFocus model.Focus <| Some id }
-            | NumberField.OutMessage.ChangeValue fo ->
-                let n' =
-                    fo
-                    |> Option.defaultValue model.Num
-                { model with Num = n' }
-        { model' with NumField = fieldModel }, Cmd.none
-    | StrField smsg ->
-        let (fieldModel, fieldCmd) = StringField.update model.Game model.StrField smsg
-        let model' =
-            match fieldCmd with
-            | StringField.OutMessage.NoOutMessage -> model
-            | StringField.OutMessage.Focus id ->
-                { model with Focus = FocusTracker.changeFocus model.Focus <| Some id }
-            | StringField.OutMessage.ChangeValue fo ->
-                let s' =
-                    fo
-                    |> Option.defaultValue model.Str
-                { model with Str = s' }
-        { model' with StrField = fieldModel }, Cmd.none
+    | FormMessage fm ->
+        let f = Form.update fm model.Form
+        { model with Form = f }, Cmd.none
 
 let view model dispatch assets =
+    let numField =
+        model.Form.Fields
+        |> List.find (fun field ->
+            match field with
+            | Form.NumField _ -> true
+            | _ -> false
+        )
+
+    let numValue =
+        match numField with
+        | Form.NumField (value,_) -> value
+        | _ -> 0.
+
+    let strField =
+        model.Form.Fields
+        |> List.find (fun field ->
+            match field with
+            | Form.StrField _ -> true
+            | _ -> false
+        )
+    
+    let strValue =
+        match strField with
+        | Form.StrField (value,_) -> value
+        | _ -> ""
+
     [
         colour Colour.White (200, 500) (25, 25)
         colour Colour.White (200, 500) (250, 25)
-        text "basic" 18. Colour.Black (0., 0.) (sprintf "Number Value: %.2f" model.Num) (250, 25)
-        text "basic" 18. Colour.Black (0., 0.) (sprintf "String Value: %s" model.Str) (250, 100)
-        yield! NumberField.view (50, 25) 20 (FocusTracker.isFocused model.Focus model.NumField.Id) model.NumField (NumField >> dispatch) assets
-        yield! StringField.view (50, 100) 20 (FocusTracker.isFocused model.Focus model.StrField.Id) model.StrField (StrField >> dispatch) assets
+        text "basic" 18. Colour.Black (0., 0.) (sprintf "Number Value: %.2f" numValue) (250, 25)
+        text "basic" 18. Colour.Black (0., 0.) (sprintf "String Value: %s" strValue) (250, 100)
+        yield! Form.view (50,25) 20 75 model.Form (FormMessage >> dispatch) assets
     ]
 
 [<EntryPoint>]

@@ -6,6 +6,7 @@ open Microsoft.Xna.Framework
 open Microsoft.Xna.Framework.Graphics
 open Microsoft.Xna.Framework.Input
 open Model
+open Microsoft.Xna.Framework.Input
 
 /// An alias for the .NET Queue of string class. For 'play once' things like sounds, this
 /// is useful to add to your model in order to play effects properly. See the space invaders sample for usage
@@ -76,6 +77,21 @@ let onclickpoint event =
 let onkeydown key event =
     onupdate (fun inputs -> 
         if inputs.keyboardState.IsKeyDown key 
+        && not (inputs.lastKeyboardState.IsKeyDown key) then 
+            event ())
+
+let onkeydownWithShift key event =
+    onupdate (fun inputs -> 
+        if inputs.keyboardState.IsKeyDown key 
+        && (inputs.keyboardState.IsKeyDown Keys.LeftShift || inputs.keyboardState.IsKeyDown Keys.RightShift)
+        && not (inputs.lastKeyboardState.IsKeyDown key) then 
+            event ())
+
+let onkeydownWithoutShift key event =
+    onupdate (fun inputs -> 
+        if inputs.keyboardState.IsKeyDown key 
+        && not (inputs.keyboardState.IsKeyDown Keys.LeftShift)
+        && not (inputs.keyboardState.IsKeyDown Keys.RightShift)
         && not (inputs.lastKeyboardState.IsKeyDown key) then 
             event ())
 

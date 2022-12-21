@@ -9,6 +9,8 @@ open Xelmish.Viewables
 open Xelmish.Forms
 open System.Globalization
 
+type FieldId = string
+
 type FieldValueState<'T>
     = Valid of 'T
     | Invalid of string*string
@@ -25,7 +27,7 @@ type TextWindow = {
 }
 
 type Model<'T> = {
-    Id: string
+    Id: FieldId
     Font: string
     Label: string
     Value: FieldValueState<'T>

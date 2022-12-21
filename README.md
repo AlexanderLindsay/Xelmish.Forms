@@ -10,11 +10,11 @@
 * A float field that captures numeric input and has increment/decrement buttons
 * A single line text field that captures text input
 * A blinking cursor
-* A windowed text box (though there are some issues still)
+* A windowed text box
+* changing focus by mouse or tab (tab only works once focus is put on a field to start with)
 
 ## What doesn't exist
 
 * Selection/Highlighting of text
 * Copy/Paste
 * Controlling the cursor with the mouse
-* The windowed text box follows the cursor and so doesn't stick to the end like a html text box would (basically moving the cursor left once it is outside of the length of the text box is broken atm)

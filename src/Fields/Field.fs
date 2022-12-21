@@ -117,17 +117,18 @@ let updateWindow (gameInfo: Xelmish.Program.GameInfo) font (rawValue: string) cu
     | true ->
         let endIndex = max cursor currentWindow.EndIndex
         let reversed = revString rawValue
-        let text = reversed.Substring(reversed.Length - endIndex)
+        let diff = reversed.Length - endIndex
+        let text = reversed.Substring(diff)
         let assets = gameInfo.GetAssets()
         let start =
             assets
             |> Option.map (fun assets ->
                 let font = getFont assets font
                 let cutoff = getStringCutoff font text currentWindow.Width
-                cutoff
+                cutoff + 1 + diff
             )
-            |> Option.defaultValue text.Length
-        { currentWindow with StartIndex = (reversed.Length - (start + 1)); EndIndex = endIndex; }
+            |> Option.defaultValue reversed.Length
+        { currentWindow with StartIndex = (reversed.Length - start); EndIndex = endIndex; }
     | false ->
         let start = min cursor currentWindow.StartIndex
         let text = rawValue.Substring(start)
@@ -137,9 +138,9 @@ let updateWindow (gameInfo: Xelmish.Program.GameInfo) font (rawValue: string) cu
             |> Option.map (fun assets ->
                 let font = getFont assets font
                 let cutoff = getStringCutoff font text currentWindow.Width
-                (cutoff + 1)
+                (cutoff + 1 + start)
             )
-            |> Option.defaultValue text.Length
+            |> Option.defaultValue rawValue.Length
         { currentWindow with StartIndex = start; EndIndex = endIndex; }
 
 let setCursor str index =
@@ -198,7 +199,8 @@ let updateCursorState visibleFor hiddenFor state elapsed =
 
 let changeCursor gameInfo model newCursor =
     let cursor = setCursor model.Raw newCursor
-    { model with Cursor = cursor; Window = updateWindow gameInfo model.Font model.Raw cursor model.Window }
+    let window = updateWindow gameInfo model.Font model.Raw cursor model.Window
+    { model with Cursor = cursor; Window = window }
 
 let update gameInfo model msg =
     match msg with
@@ -250,7 +252,7 @@ let buildFieldView (x,y) fieldHeight isFocused model dispatch assets =
         text model.Font 18. Colour.Black (0.,0.) model.Label (x,y)
         colour Colour.BlanchedAlmond (model.Window.Width + 3, fieldHeight + 1) (fst fieldPosition - 3, snd fieldPosition - 1)
         text model.Font 18. Colour.Black (0.,0.) str fieldPosition
-        yield! (if isFocused then drawCursor fieldPosition 16 basicFont 18. str model.Cursor model.CursorState else [])
+        yield! (if isFocused then drawCursor fieldPosition 16 basicFont 18. str (model.Cursor - model.Window.StartIndex) model.CursorState else [])
         onclick (fun () -> 
             dispatch (Focus)
         ) (model.Window.Width, int labelSize.Y + gap + fieldHeight) (x, y)

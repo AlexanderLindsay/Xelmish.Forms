@@ -31,6 +31,7 @@ type Model<'T> = {
     Font: string
     Label: string
     Value: FieldValueState<'T>
+    DefaultValue: 'T option
     Window: TextWindow
     Cursor: int
     CursorVisibleFor: TimeSpan
@@ -69,7 +70,7 @@ let getFont (assets: LoadedAssets) fontName =
     | Some f -> f
     | None -> raise (ArgumentException(sprintf "No font \"%s\" could be found" fontName))
 
-let initField (gameInfo: Xelmish.Program.GameInfo) parse toString id width font label value =
+let initField (gameInfo: Xelmish.Program.GameInfo) parse toString id width font label value defaultValue =
     let visibleSpan = TimeSpan(0,0,0,0,500)
     let hiddenSpan = TimeSpan(0,0,0,0,500)
     let assets = gameInfo.GetAssets()
@@ -96,6 +97,7 @@ let initField (gameInfo: Xelmish.Program.GameInfo) parse toString id width font 
             value
             |> Option.map (fun v -> Valid v)
             |> Option.defaultValue NoValue;
+        DefaultValue = defaultValue;
         Raw = rawText
         Cursor = 0;
         CursorVisibleFor = visibleSpan;
@@ -132,15 +134,18 @@ let updateWindow (gameInfo: Xelmish.Program.GameInfo) font (rawValue: string) cu
     | false ->
         let start = min cursor currentWindow.StartIndex
         let text = rawValue.Substring(start)
-        let assets = gameInfo.GetAssets()
         let endIndex =
-            assets
-            |> Option.map (fun assets ->
-                let font = getFont assets font
-                let cutoff = getStringCutoff font text currentWindow.Width
-                (cutoff + 1 + start)
-            )
-            |> Option.defaultValue rawValue.Length
+            match text.Length with
+            | 0 -> 0
+            | _ ->
+                let assets = gameInfo.GetAssets()
+                assets
+                |> Option.map (fun assets ->
+                    let font = getFont assets font
+                    let cutoff = getStringCutoff font text currentWindow.Width
+                    (cutoff + 1 + start)
+                )
+                |> Option.defaultValue rawValue.Length
         { currentWindow with StartIndex = start; EndIndex = endIndex; }
 
 let setCursor str index =
@@ -154,7 +159,7 @@ let setValue gameInfo model str cursor =
         | false ->
             match value' with
             | Valid f -> ChangeValue <| Some f
-            | Invalid (_,_) -> NoOutMessage
+            | Invalid (_,_) -> ChangeValue model.DefaultValue
             | NoValue -> ChangeValue None
     let cursor = setCursor str cursor;
     { model with 

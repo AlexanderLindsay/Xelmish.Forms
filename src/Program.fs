@@ -11,8 +11,8 @@ type Model = {
 let init gameInfo =
     {
         Form = Form.init gameInfo [
-            Form.NumField (0.,NumberField.init gameInfo 100 "basic" "test-number-field" "Number" <| Some 0.)
-            Form.StrField ("",StringField.init gameInfo 100 "basic" "test-string-field" "String" <| Some "")
+            Form.NumField (0.,NumberField.init gameInfo 100 "basic" "test-number-field" "Number" (Some 0.) (Some 0.))
+            Form.StrField ("",StringField.init gameInfo 100 "basic" "test-string-field" "String" (Some "") None)
         ]
     }, Cmd.none
 
